@@ -42,7 +42,7 @@ public class ContentdetectorServiceApplication implements ErrorController {
 		}
 	}
 
-	@PostMapping(path = "/content", produces = "application/json; charset=UTF-8")
+	@PostMapping(path = "/content", produces = "application/json; charset=UTF-8", consumes = "application/octet-stream")
 	@ResponseBody
 	public String getContentType(@RequestBody byte[] payload) {
 		try {
