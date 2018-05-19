@@ -36,6 +36,9 @@ public class ContentdetectorServiceApplication implements ErrorController {
 	@Autowired
 	private Timer uploads;
 
+	@Autowired
+	private Counter volume;
+
 	public static void main(String[] args) {
 		SpringApplication.run(ContentdetectorServiceApplication.class, args);
 	}
@@ -69,6 +72,7 @@ public class ContentdetectorServiceApplication implements ErrorController {
 		} catch (IOException ioException) {
 			throw new RuntimeException("Tika detection failed", ioException);
 		} finally {
+			volume.increment(payload.length / 1024 / 1024);
 			uploads.record(System.currentTimeMillis() - started, TimeUnit.MILLISECONDS);
 		}
 	}
@@ -96,6 +100,12 @@ public class ContentdetectorServiceApplication implements ErrorController {
 	Timer uploads(MeterRegistry registry) {
 		Timer uploads = registry.timer("uploads");
 		return uploads;
+	}
+
+	@Bean
+	Counter volume(MeterRegistry registry) {
+		Counter volume = registry.counter("volume");
+		return volume;
 	}
 
 }
