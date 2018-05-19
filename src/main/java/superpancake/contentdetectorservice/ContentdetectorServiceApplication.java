@@ -1,6 +1,7 @@
 package superpancake.contentdetectorservice;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.exception.TikaException;
@@ -19,6 +20,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import io.micrometer.spring.autoconfigure.MeterRegistryCustomizer;
+
 @SpringBootApplication
 @Controller
 @Configuration
@@ -26,6 +32,9 @@ public class ContentdetectorServiceApplication implements ErrorController {
 
 	@Autowired
 	private TikaConfig tika;
+
+	@Autowired
+	private Timer uploads;
 
 	public static void main(String[] args) {
 		SpringApplication.run(ContentdetectorServiceApplication.class, args);
@@ -42,14 +51,25 @@ public class ContentdetectorServiceApplication implements ErrorController {
 		}
 	}
 
+	public static class ContentTypeResponse {
+		public String mediaType;
+	}
+
 	@PostMapping(path = "/content", produces = "application/json; charset=UTF-8", consumes = "application/octet-stream")
 	@ResponseBody
-	public String getContentType(@RequestBody byte[] payload) {
+	public ContentTypeResponse getContentType(@RequestBody byte[] payload) {
+		final long started = System.currentTimeMillis();
 		try {
 			MediaType mediaType = tika.getDetector().detect(TikaInputStream.get(payload), new Metadata());
-			return String.format("{ \"mediaType\" : \"%s\" }", mediaType.toString());
+
+			ContentTypeResponse r = new ContentTypeResponse();
+			r.mediaType = mediaType.toString();
+
+			return r;
 		} catch (IOException ioException) {
 			throw new RuntimeException("Tika detection failed", ioException);
+		} finally {
+			uploads.record(System.currentTimeMillis() - started, TimeUnit.MILLISECONDS);
 		}
 	}
 
@@ -63,6 +83,19 @@ public class ContentdetectorServiceApplication implements ErrorController {
 	@Override
 	public String getErrorPath() {
 		return ERROR_PATH;
+	}
+
+	@Bean
+	MeterRegistryCustomizer<?> meterRegistryCustomizer(MeterRegistry meterRegistry) {
+		return meterRegistry1 -> {
+			meterRegistry.config().commonTags("application", "content-detector-service");
+		};
+	}
+
+	@Bean
+	Timer uploads(MeterRegistry registry) {
+		Timer uploads = registry.timer("uploads");
+		return uploads;
 	}
 
 }
