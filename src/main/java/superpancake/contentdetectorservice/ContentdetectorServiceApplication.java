@@ -3,6 +3,8 @@ package superpancake.contentdetectorservice;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.tika.config.TikaConfig;
 import org.apache.tika.exception.TikaException;
 import org.apache.tika.io.TikaInputStream;
@@ -30,6 +32,8 @@ import io.micrometer.spring.autoconfigure.MeterRegistryCustomizer;
 @Configuration
 public class ContentdetectorServiceApplication implements ErrorController {
 
+	private static Log LOGGER = LogFactory.getLog(ContentdetectorServiceApplication.class);
+	
 	@Autowired
 	private TikaConfig tika;
 
@@ -68,6 +72,8 @@ public class ContentdetectorServiceApplication implements ErrorController {
 			ContentTypeResponse r = new ContentTypeResponse();
 			r.mediaType = mediaType.toString();
 
+			LOGGER.info("detected '" + r.mediaType + "' (" + payload.length + " bytes)");
+			
 			return r;
 		} catch (IOException ioException) {
 			throw new RuntimeException("Tika detection failed", ioException);
