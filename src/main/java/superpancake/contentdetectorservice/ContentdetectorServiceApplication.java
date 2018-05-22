@@ -3,6 +3,7 @@ package superpancake.contentdetectorservice;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.tika.config.TikaConfig;
@@ -32,6 +33,8 @@ import io.micrometer.spring.autoconfigure.MeterRegistryCustomizer;
 @Configuration
 public class ContentdetectorServiceApplication implements ErrorController {
 
+	private final String pod = StringUtils.defaultString(System.getenv("HOSTNAME"), "local"); // k8s
+	
 	private static Log LOGGER = LogFactory.getLog(ContentdetectorServiceApplication.class);
 	
 	@Autowired
@@ -98,19 +101,19 @@ public class ContentdetectorServiceApplication implements ErrorController {
 	@Bean
 	MeterRegistryCustomizer<?> meterRegistryCustomizer(MeterRegistry meterRegistry) {
 		return meterRegistry1 -> {
-			meterRegistry.config().commonTags("application", "content-detector-service");
+			meterRegistry.config().commonTags("application", "content-detector-service", "instance", pod);
 		};
 	}
 
 	@Bean
 	Timer uploads(MeterRegistry registry) {
-		Timer uploads = registry.timer("uploads");
+		Timer uploads = registry.timer("uploads", "instance", pod);
 		return uploads;
 	}
 
 	@Bean
 	Counter volume(MeterRegistry registry) {
-		Counter volume = registry.counter("volume");
+		Counter volume = registry.counter("volume", "instance", pod);
 		return volume;
 	}
 
